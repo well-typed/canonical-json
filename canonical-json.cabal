@@ -8,7 +8,7 @@ description:         An implementation of Canonical JSON.
                      The \"canonical JSON\" format is designed to provide
                      repeatable hashes of JSON-encoded data. It is designed
                      for applications that need to hash, sign or authenitcate
-                     JSON data structures.
+                     JSON data structures, including embedded signatures.
                      .
                      Canonical JSON is parsable with any full JSON parser, and
                      it allows whitespace for pretty-printed human readable
