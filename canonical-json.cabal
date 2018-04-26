@@ -1,5 +1,5 @@
 name:                canonical-json
-version:             0.5.0.0
+version:             0.5.0.1
 synopsis:            Canonical JSON for signing and hashing JSON values
 description:         An implementation of Canonical JSON.
                      .
