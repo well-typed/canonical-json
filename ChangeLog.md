@@ -1,7 +1,9 @@
 # Revision history for canonical-json
 
-## 0.5.0.1 2018-04-26
+## 0.5.0.1 2018-10-26
+
 * ghc-8.4 compatibility.
+* Move the test suite from the hackage-security library
 
 ## 0.5.0.0 2017-09-06
 
