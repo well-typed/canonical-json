@@ -20,10 +20,15 @@ license-file:        LICENSE
 author:              Duncan Coutts, Edsko de Vries
 maintainer:          duncan@well-typed.com, edsko@well-typed.com
 copyright:           Copyright 2015-2017 Well-Typed LLP
+homepage:            https://github.com/well-typed/canonical-json
 category:            Text, JSON
 build-type:          Simple
 extra-source-files:  ChangeLog.md
 cabal-version:       >=1.10
+
+source-repository head
+  type:     git
+  location: https://github.com/well-typed/canonical-json.git
 
 library
   exposed-modules:     Text.JSON.Canonical
