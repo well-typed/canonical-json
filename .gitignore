@@ -1,0 +1,5 @@
+# Cabal building
+dist/*
+dist-newstyle/*
+.ghc.environment.*
+
