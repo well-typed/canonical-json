@@ -77,8 +77,8 @@ s_value (JSString s)   = s_string s
 s_value (JSArray vs)   = s_array  vs
 s_value (JSObject fs)  = s_object (sortBy (compare `on` fst) fs)
 
-s_string :: String -> ShowS
-s_string s = showChar '"' . showl s
+s_string :: JSString -> ShowS
+s_string s = showChar '"' . showl (fromJSString s)
   where showl []     = showChar '"'
         showl (c:cs) = s_char c . showl cs
 
@@ -92,7 +92,7 @@ s_array (v0:vs0)     = showChar '[' . s_value v0 . showl vs0
   where showl []     = showChar ']'
         showl (v:vs) = showChar ',' . s_value v . showl vs
 
-s_object :: [(String, JSValue)] -> ShowS
+s_object :: [(JSString, JSValue)] -> ShowS
 s_object []               = showString "{}"
 s_object ((k0,v0):kvs0)   = showChar '{' . s_string k0
                           . showChar ':' . s_value v0
@@ -174,8 +174,9 @@ char:
    \\
    \"
 -}
-p_string         :: CharParser () String
-p_string          = between (char '"') (tok (char '"')) (many p_char)
+p_string         :: CharParser () JSString
+p_string          = between (char '"') (tok (char '"'))
+                            (toJSString <$> many p_char)
   where p_char    =  (char '\\' >> p_esc)
                  <|> (satisfy (\x -> x /= '"' && x /= '\\'))
 
@@ -192,7 +193,7 @@ members:
 pair:
    string : value
 -}
-p_object         :: CharParser () [(String,JSValue)]
+p_object         :: CharParser () [(JSString, JSValue)]
 p_object          = between (tok (char '{')) (tok (char '}'))
                   $ p_field `sepBy` tok (char ',')
   where p_field   = (,) <$> (p_string <* tok (char ':')) <*> p_jvalue
@@ -256,8 +257,8 @@ jvalue (JSString s)   = jstring s
 jvalue (JSArray vs)   = jarray  vs
 jvalue (JSObject fs)  = jobject fs
 
-jstring :: String -> Doc
-jstring = doubleQuotes . hcat . map jchar
+jstring :: JSString -> Doc
+jstring = doubleQuotes . hcat . map jchar . fromJSString
 
 jchar :: Char -> Doc
 jchar '"'   = Doc.char '\\' <> Doc.char '"'
@@ -268,7 +269,7 @@ jarray :: [JSValue] -> Doc
 jarray = sep . punctuate' lbrack comma rbrack
        . map jvalue
 
-jobject :: [(String, JSValue)] -> Doc
+jobject :: [(JSString, JSValue)] -> Doc
 jobject = sep . punctuate' lbrace comma rbrace
         . map (\(k,v) -> sep [jstring k <> colon, nest 2 (jvalue v)])
 
