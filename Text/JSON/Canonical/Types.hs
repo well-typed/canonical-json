@@ -9,6 +9,9 @@
 module Text.JSON.Canonical.Types
   ( JSValue(..)
   , Int54(..)
+  , JSString
+  , toJSString
+  , fromJSString
   ) where
 
 import Control.Arrow (first)
@@ -19,19 +22,61 @@ import Data.Bits (FiniteBits)
 import Data.Data (Data)
 import Data.Int (Int64)
 import Data.Ix (Ix)
+#if !MIN_VERSION_base(4,8,0)
+import Data.Monoid (Monoid)
+#endif
+#if MIN_VERSION_base(4,9,0)
+import Data.Semigroup (Semigroup)
+#endif
 import Data.Typeable (Typeable)
 import Foreign.Storable (Storable)
+#if MIN_VERSION_base(4,7,0)
+import Text.Printf (PrintfArg(..))
+import qualified Text.Printf as Printf
+#else
 import Text.Printf (PrintfArg)
+#endif
+import Data.String (IsString)
+import Data.ByteString.Short (ShortByteString)
+import qualified Data.ByteString.Short as BS
 
 
 data JSValue
     = JSNull
     | JSBool     !Bool
     | JSNum      !Int54
-    | JSString   String
+    | JSString   !JSString
     | JSArray    [JSValue]
-    | JSObject   [(String, JSValue)]
+    | JSObject   [(JSString, JSValue)]
     deriving (Show, Read, Eq, Ord)
+
+-- | Canonical JSON strings are in fact just bytes.
+--
+newtype JSString = JStr ShortByteString
+    deriving (Eq, Ord, IsString,
+#if MIN_VERSION_base(4,9,0)
+              Semigroup,
+#endif
+              Monoid)
+
+instance Show JSString where
+  showsPrec n (JStr bs) = showsPrec n bs
+
+instance Read JSString where
+  readsPrec p = map (first JStr) . readsPrec p
+
+#if MIN_VERSION_base(4,7,0)
+instance PrintfArg JSString where
+    formatArg = Printf.formatString . fromJSString
+#endif
+
+toJSString :: String -> JSString
+toJSString str
+  | all (<= '\255') str = JStr . BS.pack . map (fromIntegral . fromEnum) $ str
+  | otherwise           = error "toJSString: cannot use non-ASCII chars"
+
+fromJSString :: JSString -> String
+fromJSString = map (toEnum . fromIntegral) . BS.unpack . (\(JStr bs) -> bs)
 
 -- | 54-bit integer values
 --

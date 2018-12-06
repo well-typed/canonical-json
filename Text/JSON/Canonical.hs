@@ -39,6 +39,7 @@ module Text.JSON.Canonical (
     -- * Types
     JSValue(..)
   , Int54
+  , JSString
     -- * Parsing and printing
   , parseCanonicalJSON
   , renderCanonicalJSON
@@ -53,6 +54,8 @@ module Text.JSON.Canonical (
   , Got
   , expectedButGotValue
     -- * Utility
+  , toJSString
+  , fromJSString
   , fromJSObject
   , fromJSField
   , fromJSOptField
