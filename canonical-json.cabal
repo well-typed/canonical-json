@@ -55,6 +55,7 @@ test-suite tests
   build-depends:       base,
                        bytestring,
                        canonical-json,
+                       containers,
                        aeson             == 1.4.*,
                        vector,
                        unordered-containers,
@@ -62,4 +63,5 @@ test-suite tests
                        tasty,
                        tasty-quickcheck
   default-language:    Haskell2010
-  ghc-options:         -Wall
+  -- -K100k to check for stack overflow:
+  ghc-options:         -Wall -with-rtsopts=-K100k
