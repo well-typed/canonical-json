@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Main (main) where
 
@@ -9,6 +10,7 @@ import           Text.JSON.Canonical
 
 import qualified Data.Aeson as Aeson (Value (..), eitherDecode)
 import           Data.String (fromString)
+import qualified Data.Map            as Map
 import qualified Data.Vector         as V  (fromList)
 import qualified Data.HashMap.Strict as HM (fromList)
 
@@ -26,6 +28,16 @@ tests = testGroup "Canonical JSON" [
         , testProperty "prop_roundtrip_pretty"    prop_roundtrip_pretty
         , testProperty "prop_canonical_pretty"    prop_canonical_pretty
         , testProperty "prop_aeson_canonical"     prop_aeson_canonical
+        , testGroup "prop_toJSON_fromJSON" [
+            testProperty "String" prop_toJSON_fromJSON_String
+          , testProperty "Int54"  prop_toJSON_fromJSON_Int54
+          , testProperty "[]"     prop_toJSON_fromJSON_List
+          , testProperty "Map"    prop_toJSON_fromJSON_Map
+          ]
+        , testGroup "no stack overflow" [
+            testProperty "[]"  unit_large_List
+          , testProperty "Map" unit_large_Map
+          ]
         ]
 
 
@@ -47,6 +59,43 @@ prop_canonical_pretty jsval =
 
 prop_aeson_canonical jsval =
     Aeson.eitherDecode (renderCanonicalJSON jsval) == Right (toAeson jsval)
+
+prop_toJSON_fromJSON :: (Monad m, ToJSON m a, FromJSON m a, Eq a) => a -> m Bool
+prop_toJSON_fromJSON x =
+    toJSON x >>= fromJSON >>= \x' -> return (x' == x)
+
+prop_toJSON_fromJSON_String :: String -> Property
+prop_toJSON_fromJSON_String = runM . prop_toJSON_fromJSON
+
+prop_toJSON_fromJSON_Int54 :: Int54 -> Property
+prop_toJSON_fromJSON_Int54 = runM . prop_toJSON_fromJSON
+
+prop_toJSON_fromJSON_List :: [String] -> Property
+prop_toJSON_fromJSON_List = runM . prop_toJSON_fromJSON
+
+prop_toJSON_fromJSON_Map :: Map.Map String String -> Property
+prop_toJSON_fromJSON_Map = runM . prop_toJSON_fromJSON
+
+unit_large_List :: Property
+unit_large_List = runM (prop_toJSON_fromJSON large)
+  where
+    large = replicate 10000 (42 :: Int54)
+
+unit_large_Map :: Property
+unit_large_Map  = runM (prop_toJSON_fromJSON large)
+  where
+    large = Map.fromList [ (show n, 42 :: Int54) | n <- [0.. 10000 :: Int] ]
+
+
+newtype M a = M (Maybe a)
+  deriving (Functor, Applicative, Monad)
+
+runM :: Testable prop => M prop -> Property
+runM (M Nothing)     = property False
+runM (M (Just prop)) = property prop
+
+instance ReportSchemaErrors M where
+  expected _ _ = M Nothing
 
 canonicalise :: JSValue -> JSValue
 canonicalise v@JSNull        = v
