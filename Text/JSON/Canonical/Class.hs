@@ -1,6 +1,8 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 #if __GLASGOW_HASKELL__ < 710
 {-# LANGUAGE OverlappingInstances #-}
@@ -33,8 +35,7 @@ module Text.JSON.Canonical.Class (
 
 import Text.JSON.Canonical.Types
 
-import Control.Monad (liftM)
-import Data.Maybe (catMaybes)
+import Control.Monad (foldM, liftM)
 import Data.Map (Map)
 import qualified Data.Map as Map
 
@@ -152,13 +153,14 @@ instance ( ReportSchemaErrors m
          ) => FromJSON m (Map k a) where
   fromJSON enc = do
       obj <- fromJSObject enc
-      Map.fromList . catMaybes <$> mapM aux obj
+      foldM step mempty obj
     where
-      aux :: (String, JSValue) -> m (Maybe (k, a))
-      aux (k, a) = knownKeys <$> fromObjectKey k <*> fromJSON a
-      knownKeys :: Maybe k -> a -> Maybe (k, a)
-      knownKeys Nothing  _ = Nothing
-      knownKeys (Just k) a = Just (k, a)
+      step :: Ord k => Map k a -> (String, JSValue) -> m (Map k a)
+      step !m (k, v) = fromObjectKey k >>= \case
+          Nothing -> pure m
+          Just k' -> do
+              v' <- fromJSON v
+              pure $ Map.insert k' v' m
 
 
 {-------------------------------------------------------------------------------
