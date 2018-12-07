@@ -1,8 +1,7 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 #if __GLASGOW_HASKELL__ < 710
 {-# LANGUAGE OverlappingInstances #-}
@@ -36,6 +35,7 @@ module Text.JSON.Canonical.Class (
 import Text.JSON.Canonical.Types
 
 import Control.Monad (foldM, liftM)
+import Data.Maybe (catMaybes)
 import Data.Map (Map)
 import qualified Data.Map as Map
 
@@ -126,14 +126,14 @@ instance
   {-# OVERLAPPABLE #-}
 #endif
     (Monad m, ToJSON m a) => ToJSON m [a] where
-  toJSON = liftM JSArray . mapM toJSON
+  toJSON = liftM JSArray . mapM' toJSON
 
 instance
 #if __GLASGOW_HASKELL__ >= 710
   {-# OVERLAPPABLE #-}
 #endif
     (ReportSchemaErrors m, FromJSON m a) => FromJSON m [a] where
-  fromJSON (JSArray as) = mapM fromJSON as
+  fromJSON (JSArray as) = mapM' fromJSON as
   fromJSON val          = expectedButGotValue "array" val
 
 
@@ -141,10 +141,10 @@ instance ( Monad m
          , ToObjectKey m k
          , ToJSON m a
          ) => ToJSON m (Map k a) where
-  toJSON = liftM JSObject . mapM aux . Map.toList
+  toJSON = liftM JSObject . mapM' aux . Map.toList
     where
       aux :: (k, a) -> m (String, JSValue)
-      aux (k, a) = do k' <- toObjectKey k; a' <- toJSON a; return (k', a')
+      aux (k, a) = (,) <$> toObjectKey k <*> toJSON a
 
 instance ( ReportSchemaErrors m
          , Ord k
@@ -153,15 +153,13 @@ instance ( ReportSchemaErrors m
          ) => FromJSON m (Map k a) where
   fromJSON enc = do
       obj <- fromJSObject enc
-      foldM step mempty obj
+      Map.fromList . catMaybes <$> mapM_reverse aux obj
     where
-      step :: Ord k => Map k a -> (String, JSValue) -> m (Map k a)
-      step !m (k, v) = fromObjectKey k >>= \case
-          Nothing -> pure m
-          Just k' -> do
-              v' <- fromJSON v
-              pure $ Map.insert k' v' m
-
+      aux :: (String, JSValue) -> m (Maybe (k, a))
+      aux (k, a) = knownKeys <$> fromObjectKey k <*> fromJSON a
+      knownKeys :: Maybe k -> a -> Maybe (k, a)
+      knownKeys Nothing  _ = Nothing
+      knownKeys (Just k) a = Just (k, a)
 
 {-------------------------------------------------------------------------------
   Utility
@@ -196,3 +194,12 @@ mkObject = liftM JSObject . sequenceFields
     sequenceFields ((fld,val):flds) = do val' <- val
                                          flds' <- sequenceFields flds
                                          return ((fld,val'):flds')
+
+-- Avoid stack overflow on large lists
+mapM' :: Monad m => (a -> m b) -> [a] -> m [b]
+mapM' f = fmap reverse . mapM_reverse f
+
+-- For when we don't care about order, can avoid the reverse
+mapM_reverse :: Monad m => (a -> m b) -> [a] -> m [b]
+mapM_reverse f = foldM (\xs a -> fmap (:xs) (f a)) []
+
