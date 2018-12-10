@@ -21,10 +21,12 @@ module Text.JSON.Canonical.Parse
 
 import Text.JSON.Canonical.Types
 
-import Text.ParserCombinators.Parsec
-         ( CharParser, (<|>), (<?>), many, between, sepBy
+import Text.Parsec
+         ( (<|>), (<?>), many, between, sepBy
          , satisfy, char, string, digit, spaces
          , parse )
+import Text.Parsec.ByteString.Lazy
+         ( Parser )
 import Text.PrettyPrint hiding (char)
 import qualified Text.PrettyPrint as Doc
 #if !(MIN_VERSION_base(4,8,0))
@@ -115,12 +117,11 @@ s_object ((k0,v0):kvs0)   = showChar '{' . s_string k0
 parseCanonicalJSON :: BS.ByteString -> Either String JSValue
 parseCanonicalJSON = either (Left . show) Right
                    . parse p_value ""
-                   . BS.unpack
 
-p_value :: CharParser () JSValue
+p_value :: Parser JSValue
 p_value = spaces *> p_jvalue
 
-tok              :: CharParser () a -> CharParser () a
+tok              :: Parser a -> Parser a
 tok p             = p <* spaces
 
 {-
@@ -133,7 +134,7 @@ value:
    false
    null
 -}
-p_jvalue         :: CharParser () JSValue
+p_jvalue         :: Parser JSValue
 p_jvalue          =  (JSNull      <$  p_null)
                  <|> (JSBool      <$> p_boolean)
                  <|> (JSArray     <$> p_array)
@@ -142,10 +143,10 @@ p_jvalue          =  (JSNull      <$  p_null)
                  <|> (JSNum       <$> p_number)
                  <?> "JSON value"
 
-p_null           :: CharParser () ()
+p_null           :: Parser ()
 p_null            = tok (string "null") >> return ()
 
-p_boolean        :: CharParser () Bool
+p_boolean        :: Parser Bool
 p_boolean         = tok
                       (  (True  <$ string "true")
                      <|> (False <$ string "false")
@@ -158,7 +159,7 @@ elements:
    value
    value , elements
 -}
-p_array          :: CharParser () [JSValue]
+p_array          :: Parser [JSValue]
 p_array           = between (tok (char '[')) (tok (char ']'))
                   $ p_jvalue `sepBy` tok (char ',')
 
@@ -174,7 +175,7 @@ char:
    \\
    \"
 -}
-p_string         :: CharParser () JSString
+p_string         :: Parser JSString
 p_string          = between (char '"') (tok (char '"'))
                             (many p_char >>= \str -> return $! toJSString str)
   where p_char    =  (char '\\' >> p_esc)
@@ -193,7 +194,7 @@ members:
 pair:
    string : value
 -}
-p_object         :: CharParser () [(JSString, JSValue)]
+p_object         :: Parser [(JSString, JSValue)]
 p_object          = between (tok (char '{')) (tok (char '}'))
                   $ p_field `sepBy` tok (char ',')
   where p_field   = (,) <$> (p_string <* tok (char ':')) <*> p_jvalue
@@ -215,7 +216,7 @@ digits:
 --
 -- TODO: Currently this allows for a maximum of 15 digits (i.e. a maximum value
 -- of @999,999,999,999,999@) as a crude approximation of the 'Int54' range.
-p_number         :: CharParser () Int54
+p_number         :: Parser Int54
 p_number          = tok
                       (  (char '-' *> (negate <$> pnat))
                      <|> pnat
@@ -229,7 +230,7 @@ p_number          = tok
 digitToInt54 :: Char -> Int54
 digitToInt54 = fromIntegral . digitToInt
 
-manyN :: Int -> CharParser () a -> CharParser () [a]
+manyN :: Int -> Parser a -> Parser [a]
 manyN 0 _ =  pure []
 manyN n p =  ((:) <$> p <*> manyN (n-1) p)
          <|> pure []
