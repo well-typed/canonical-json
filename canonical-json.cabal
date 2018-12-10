@@ -77,4 +77,4 @@ benchmark parse-bench
                        containers,
                        criterion >= 1.1
   default-language:    Haskell2010
-  ghc-options:         -Wall
+  ghc-options:         -Wall -rtsopts
