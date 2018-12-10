@@ -176,7 +176,7 @@ char:
 -}
 p_string         :: CharParser () JSString
 p_string          = between (char '"') (tok (char '"'))
-                            (toJSString <$> many p_char)
+                            (many p_char >>= \str -> return $! toJSString str)
   where p_char    =  (char '\\' >> p_esc)
                  <|> (satisfy (\x -> x /= '"' && x /= '\\'))
 
