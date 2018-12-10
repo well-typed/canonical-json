@@ -15,6 +15,7 @@ module Text.JSON.Canonical.Types
   ) where
 
 import Control.Arrow (first)
+import Control.DeepSeq (NFData(..))
 import Data.Bits (Bits)
 #if MIN_VERSION_base(4,7,0)
 import Data.Bits (FiniteBits)
@@ -50,6 +51,14 @@ data JSValue
     | JSObject   [(JSString, JSValue)]
     deriving (Show, Read, Eq, Ord)
 
+instance NFData JSValue where
+  rnf JSNull        = ()
+  rnf JSBool{}      = ()
+  rnf JSNum{}       = ()
+  rnf JSString{}    = ()
+  rnf (JSArray  vs) = rnf vs
+  rnf (JSObject vs) = rnf vs
+
 -- | Canonical JSON strings are in fact just bytes.
 --
 newtype JSString = JStr ShortByteString
@@ -58,6 +67,9 @@ newtype JSString = JStr ShortByteString
               Semigroup,
 #endif
               Monoid)
+
+instance NFData JSString where
+  rnf JStr{} = ()
 
 instance Show JSString where
   showsPrec n (JStr bs) = showsPrec n bs
