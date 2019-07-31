@@ -19,7 +19,7 @@ license:             BSD3
 license-file:        LICENSE
 author:              Duncan Coutts, Edsko de Vries
 maintainer:          duncan@well-typed.com, edsko@well-typed.com
-copyright:           Copyright 2015-2017 Well-Typed LLP
+copyright:           Copyright 2015-2018 Well-Typed LLP
 homepage:            https://github.com/well-typed/canonical-json
 category:            Text, JSON
 build-type:          Simple

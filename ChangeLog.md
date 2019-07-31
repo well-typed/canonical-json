@@ -1,8 +1,14 @@
 # Revision history for canonical-json
 
-## 0.6.0.0
+## 0.6.0.0 2019-07-31
 
 * Introduced JSString type rather than using String, for improved memory use.
+
+* Improved parser performance
+
+* Reduce stack space usage and introduce stack use tests
+
+* Added benchmarks
 
 ## 0.5.0.1 2018-10-26
 
