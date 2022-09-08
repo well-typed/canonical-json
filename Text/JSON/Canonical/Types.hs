@@ -26,7 +26,7 @@ import Data.Ix (Ix)
 #if !MIN_VERSION_base(4,8,0)
 import Data.Monoid (Monoid)
 #endif
-#if MIN_VERSION_base(4,9,0)
+#if (MIN_VERSION_base(4,9,0) && !MIN_VERSION_base(4,13,0))
 import Data.Semigroup (Semigroup)
 #endif
 import Data.Typeable (Typeable)

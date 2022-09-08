@@ -232,7 +232,7 @@ digitToInt54 = fromIntegral . digitToInt
 
 manyN :: Int -> Parser a -> Parser [a]
 manyN 0 _ =  pure []
-manyN n p =  ((:) <$> p <*> manyN (n-1) p)
+manyN n p =  ((:) <$> p <*> manyN (n - 1) p)
          <|> pure []
 
 ------------------------------------------------------------------------------
