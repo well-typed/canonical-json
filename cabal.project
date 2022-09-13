@@ -1,0 +1,6 @@
+packages: canonical-json.cabal
+
+package canonical-json
+  tests: True
+
+test-show-details: direct
