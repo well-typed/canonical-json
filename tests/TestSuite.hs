@@ -14,10 +14,10 @@ import Control.Applicative (Applicative(..), (<$>))
 #endif
 
 import qualified Data.Aeson as Aeson (Value (..), eitherDecode)
+import qualified Data.Aeson.KeyMap as KeyMap
 import           Data.String (IsString, fromString)
 import qualified Data.Map            as Map
 import qualified Data.Vector         as V  (fromList)
-import qualified Data.HashMap.Strict as HM (fromList)
 
 import           Test.QuickCheck
 import           Test.Tasty.QuickCheck (testProperty)
@@ -117,7 +117,7 @@ toAeson (JSBool b)    = Aeson.Bool b
 toAeson (JSNum n)     = Aeson.Number (fromIntegral n)
 toAeson (JSString s)  = Aeson.String (toAesonStr s)
 toAeson (JSArray xs)  = Aeson.Array  $ V.fromList  [ toAeson x | x <- xs ]
-toAeson (JSObject xs) = Aeson.Object $ HM.fromList [ (toAesonStr k, toAeson v)
+toAeson (JSObject xs) = Aeson.Object $ KeyMap.fromList [ (toAesonStr k, toAeson v)
                                                    | (k, v) <- xs ]
 
 toAesonStr :: IsString s => JSString -> s
