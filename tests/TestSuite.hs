@@ -14,10 +14,14 @@ import Control.Applicative (Applicative(..), (<$>))
 #endif
 
 import qualified Data.Aeson as Aeson (Value (..), eitherDecode)
+#if MIN_VERSION_aeson(2,0,0)
+import qualified Data.Aeson.KeyMap as KeyMap (fromList)
+#else
+import qualified Data.HashMap.Strict as KeyMap (fromList)
+#endif
 import           Data.String (IsString, fromString)
 import qualified Data.Map            as Map
 import qualified Data.Vector         as V  (fromList)
-import qualified Data.HashMap.Strict as HM (fromList)
 
 import           Test.QuickCheck
 import           Test.Tasty.QuickCheck (testProperty)
@@ -63,7 +67,9 @@ prop_canonical_pretty jsval =
     fmap canonicalise (parseCanonicalJSON (BS.pack (prettyCanonicalJSON jsval)))
 
 prop_aeson_canonical jsval =
-    Aeson.eitherDecode (renderCanonicalJSON jsval) == Right (toAeson jsval)
+    Aeson.eitherDecode (renderCanonicalJSON jsval') == Right (toAeson jsval')
+  where
+    jsval' = omitNonPrintableChars jsval
 
 prop_toJSON_fromJSON :: (Monad m, ToJSON m a, FromJSON m a, Eq a) => a -> m Bool
 prop_toJSON_fromJSON x =
@@ -117,11 +123,42 @@ toAeson (JSBool b)    = Aeson.Bool b
 toAeson (JSNum n)     = Aeson.Number (fromIntegral n)
 toAeson (JSString s)  = Aeson.String (toAesonStr s)
 toAeson (JSArray xs)  = Aeson.Array  $ V.fromList  [ toAeson x | x <- xs ]
-toAeson (JSObject xs) = Aeson.Object $ HM.fromList [ (toAesonStr k, toAeson v)
-                                                   | (k, v) <- xs ]
+toAeson (JSObject xs) = Aeson.Object $ KeyMap.fromList [ (toAesonStr k, toAeson v)
+                                                       | (k, v) <- xs ]
 
 toAesonStr :: IsString s => JSString -> s
 toAesonStr = fromString . fromJSString
+
+-- | As discussed in the haddock docs for 'renderCanonicalJSON', Canonical
+-- JSON is /not/ a proper subset of RFC 7159.
+--
+-- So for the property 'prop_aeson_canonical', where we check that everything
+-- produced as canoncal JSON can be parsed by Aeson (which we assume correctly
+-- implements RFC 7159), we have to tweak things to keep us within the common
+-- subset of canoncal JSON and RFC 7159. Specifically, canoncal JSON only
+-- escapes \ and ", and does not escape any other non-printable characters.
+--
+-- So the tweak is to just omit non-printable characters from all strings.
+--
+omitNonPrintableChars :: JSValue -> JSValue
+omitNonPrintableChars = omitJSValue
+  where
+    omitJSValue v@JSNull        = v
+    omitJSValue v@(JSBool    _) = v
+    omitJSValue v@(JSNum     _) = v
+    omitJSValue   (JSString  s) = JSString (omitJSString s)
+    omitJSValue   (JSArray  vs) = JSArray  [ omitJSValue v | v <- vs]
+    omitJSValue   (JSObject vs) = JSObject $ omitDupKeys
+                                           [ (omitJSString k, omitJSValue v)
+                                           | (k,v) <- vs ]
+
+    omitDupKeys :: [(JSString, JSValue)] -> [(JSString, JSValue)]
+    omitDupKeys = nubBy (\a b -> fst a == fst b)
+
+    omitJSString :: JSString -> JSString
+    omitJSString = toJSString
+                 . filter (\c -> c >= ' ')
+                 . fromJSString
 
 instance Arbitrary JSValue where
   arbitrary =
@@ -161,5 +198,6 @@ instance Arbitrary Int54 where
 
 instance Arbitrary JSString where
   arbitrary = toJSString . getASCIIString <$> arbitrary
-  shrink  s = [ toJSString s' | s' <- shrink (fromJSString s) ]
+  shrink  s = [ toJSString s' | s' <- shrink (fromJSString s)
+                              , all (\c -> c >= ' ') s' ]
 
