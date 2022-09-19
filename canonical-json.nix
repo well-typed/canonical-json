@@ -3,7 +3,7 @@
 }:
 mkDerivation {
   pname = "canonical-json";
-  version = "0.5.0.0";
+  version = "0.6.0.1";
   src = ./.;
   libraryHaskellDepends = [
     base bytestring containers parsec pretty
