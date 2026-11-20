@@ -2,5 +2,6 @@ packages: canonical-json.cabal
 
 package canonical-json
   tests: True
+  benchmarks: True
 
 test-show-details: direct

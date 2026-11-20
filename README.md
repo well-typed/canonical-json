@@ -1,5 +1,14 @@
 An implementation of [Canonical JSON].
 
+> [!WARNING]
+> This library is no longer being maintained. Use of the library as well as
+> feedback is welcome, but Well-Typed cannot guarantee any level of unpaid
+> maintenance or support. Please contact us via email to info@well-typed.com if
+> you are interested in commercial support or funding development of the
+> library.
+
+# Background
+
 The "canonical JSON" format is designed to provide repeatable hashes of
 JSON values. It is designed for applications that need to hash, sign
 or authenitcate JSON data structures., including embedded signatures.
@@ -32,14 +41,13 @@ where the `root.json` both contains a body value and multiple signatures of
 that body all within the same file. This is because canoncal JSON is about
 hashes for *JSON values, not serialised JSON text*.
 
+# Known bugs limitations
+
+ * Decoding/encoding Unicode code-points beyond `U+00ff` is currently broken
+
+
 [Canonical JSON]: http://wiki.laptop.org/go/Canonical_JSON
 [API docs]: https://hackage.haskell.org/package/canonical-json
 [hackage-security]: https://hackage.haskell.org/package/hackage-security
 [root keys file]: https://hackage.haskell.org/root.json
-
-
-Known bugs limitations
------------------------
-
- * Decoding/encoding Unicode code-points beyond `U+00ff` is currently broken
 
